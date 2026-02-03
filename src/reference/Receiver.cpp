@@ -7,80 +7,16 @@
 // It is designed to work with the other example Feather9x_TX
 
 #include <Arduino.h>
-#include <SPI.h>
 #include <RH_RF95.h>
 #include <Adafruit_GPS.h>
 
-// First 3 here are boards w/radio BUILT-IN. Boards using FeatherWing follow.
-#if defined (__AVR_ATmega32U4__)  // Feather 32u4 w/Radio
-#define RFM95_CS    8
-  #define RFM95_INT   7
-  #define RFM95_RST   4
-
-#elif defined(ADAFRUIT_FEATHER_M0) || defined(ADAFRUIT_FEATHER_M0_EXPRESS) || defined(ARDUINO_SAMD_FEATHER_M0)  // Feather M0 w/Radio
+// Feather M0 w/Radio Pins
 #define RFM95_CS    8
 #define RFM95_INT   3
 #define RFM95_RST   4
 
-#elif defined(ARDUINO_ADAFRUIT_FEATHER_RP2040_RFM)  // Feather RP2040 w/Radio
-#define RFM95_CS   16
-  #define RFM95_INT  21
-  #define RFM95_RST  17
-
-#elif defined (__AVR_ATmega328P__)  // Feather 328P w/wing
-  #define RFM95_CS    4  //
-  #define RFM95_INT   3  //
-  #define RFM95_RST   2  // "A"
-
-#elif defined(ESP8266)  // ESP8266 feather w/wing
-  #define RFM95_CS    2  // "E"
-  #define RFM95_INT  15  // "B"
-  #define RFM95_RST  16  // "D"
-
-#elif defined(ARDUINO_ADAFRUIT_FEATHER_ESP32S2) || defined(ARDUINO_NRF52840_FEATHER) || defined(ARDUINO_NRF52840_FEATHER_SENSE)
-  #define RFM95_CS   10  // "B"
-  #define RFM95_INT   9  // "A"
-  #define RFM95_RST  11  // "C"
-
-#elif defined(ESP32)  // ESP32 feather w/wing
-  #define RFM95_CS   33  // "B"
-  #define RFM95_INT  27  // "A"
-  #define RFM95_RST  13
-
-#elif defined(ARDUINO_NRF52832_FEATHER)  // nRF52832 feather w/wing
-  #define RFM95_CS   11  // "B"
-  #define RFM95_INT  31  // "C"
-  #define RFM95_RST   7  // "A"
-
-#endif
-
-/* Some other possible setups include:
-
-// Feather 32u4:
-#define RFM95_CS   8
-#define RFM95_RST  4
-#define RFM95_INT  7
-
-// Feather M0:
-#define RFM95_CS   8
-#define RFM95_RST  4
-#define RFM95_INT  3
-
-// Arduino shield:
-#define RFM95_CS  10
-#define RFM95_RST  9
-#define RFM95_INT  7
-
-// Feather 32u4 w/wing:
-#define RFM95_RST 11  // "A"
-#define RFM95_CS  10  // "B"
-#define RFM95_INT  2  // "SDA" (only SDA/SCL/RX/TX have IRQ!)
-
-// Feather m0 w/wing:
-#define RFM95_RST 11  // "A"
-#define RFM95_CS  10  // "B"
-#define RFM95_INT  6  // "D"
-*/
+// name of the hardware serial port for GPS
+#define GPSSerial Serial1
 
 // Change to 434.0 or other frequency, must match RX's freq!
 #define RF95_FREQ 915.0
@@ -88,15 +24,8 @@
 // Singleton instance of the radio driver
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
-// what's the name of the hardware serial port?
-#define GPSSerial Serial1
-
 // Connect to the GPS on the hardware port
 Adafruit_GPS GPS(&GPSSerial);
-
-// Set GPSECHO to 'false' to turn off echoing the GPS data to the Serial console
-// Set to 'true' if you want to debug and listen to the raw GPS sentences
-#define GPSECHO false
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
@@ -155,8 +84,18 @@ void setup() {
 }
 
 void loop() {
+  (void)GPS.read();
   delay(1000);
-  if(GPS.available()) {
+
+  // If a full NMEA sentence has arrived
+  if (GPS.newNMEAreceived()) {
+    // Try to parse it
+    if (!GPS.parse(GPS.lastNMEA())) {
+      return; // parsing failed, wait for another sentence
+    }
+  }
+
+  if (GPS.fix) {
     Serial.println("GPS Available!");
     Serial.println(GPS.lastNMEA());
     Serial.print("Latitude: ");

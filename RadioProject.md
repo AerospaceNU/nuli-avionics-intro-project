@@ -94,5 +94,14 @@ void calculateCrc(uint8_t *data, uint8_t length) {
 
 ```
 
+List all COM devices using:
+`$ pio device list`
+You should be looking for COM devices whose description is “USB Serial Device (COM#)”
+
+Then start a device manager session in two terminals, one for each device:
+`$ pio device monitor -p COM7 -b 115200`
+`$ pio device monitor -p COM9 -b 115200`
+
+
 ## Implementation
 
